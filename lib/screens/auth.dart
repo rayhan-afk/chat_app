@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+final _firebase = FirebaseAuth.instance;
 
 class AuthScreen extends StatefulWidget {
   const AuthScreen({Key? key}) : super(key: key);
@@ -16,13 +19,32 @@ class _AuthScreenState extends State<AuthScreen> {
   var _enteredEmail = '';
   var _enteredPassword = '';
 
-  void _submit() {
+  void _submit() async {
     final isValid = _form.currentState!.validate();
 
-    if (isValid) {
-      _form.currentState!.save();
-      print(_enteredEmail);
-      print(_enteredPassword);
+    if (!isValid) {
+      return;
+    }
+
+    _form.currentState!.save();
+
+    if (_isLogin) {
+      // Log user in
+    } else {
+      try {
+        final userCredential = await _firebase.createUserWithEmailAndPassword(
+            email: _enteredEmail, password: _enteredPassword);
+        print(userCredential);
+      } on FirebaseAuthException catch (error) {
+        if (error.code == 'email-already-in-use') {}
+        ScaffoldMessenger.of(context).clearSnackBars();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(error.message ?? 'Autehntication failed!'),
+            // backgroundColor: Theme.of(context).errorColor,
+          ),
+        );
+      }
     }
   }
 
@@ -78,8 +100,7 @@ class _AuthScreenState extends State<AuthScreen> {
                                 const InputDecoration(labelText: 'Password'),
                             obscureText: true,
                             validator: (value) {
-                              if (value == null ||
-                                  value.trim().length < 6) {
+                              if (value == null || value.trim().length < 6) {
                                 return 'Password must be at least 6 characters long.';
                               }
                               return null;
